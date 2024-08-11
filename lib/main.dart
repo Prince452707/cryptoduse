@@ -17670,8 +17670,6 @@
 //   }
 // }
 
-import 'package:flutter/services.dart';
-import 'dart:ui';
 import 'package:shimmer/shimmer.dart';
 import 'package:intl/intl.dart';
 import 'package:http/http.dart' as http;
@@ -18463,14 +18461,6 @@ class AppTheme {
   }
 }
 
-
-
-
-
-
-
-
-
 class CryptoPackScreen extends StatefulWidget {
   @override
   _CryptoPackScreenState createState() => _CryptoPackScreenState();
@@ -18931,10 +18921,6 @@ class CryptoDataRepository {
     }
   }
 }
-
-
-
-
 
 class CryptoDetailScreen extends StatefulWidget {
   final String coinId;
@@ -19445,32 +19431,31 @@ class CryptoPackDetailScreen extends StatelessWidget {
       ),
     );
   }
-
-  Widget _buildCoinDistribution(BuildContext context) {
-    return SliverToBoxAdapter(
-      child: FutureBuilder<List<dynamic>>(
-        future: _fetchCryptoData(context),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildLoadingShimmer();
-          } else if (snapshot.hasError ||
-              !snapshot.hasData ||
-              snapshot.data!.isEmpty) {
-            return Center(
-                child:
-                    Text('No data available', style: TextStyle(fontSize: 18)));
-          } else {
-            return Column(
-              children: [
-                _buildPieChart(snapshot.data!),
-                _buildCoinList(context, snapshot.data!),
-              ],
-            );
-          }
-        },
-      ),
-    );
-  }
+Widget _buildCoinDistribution(BuildContext context) {
+  return SliverToBoxAdapter(
+    child: FutureBuilder<List<dynamic>>(
+      future: _fetchCryptoData(context),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildLoadingShimmer();
+        } else if (snapshot.hasError ||
+            !snapshot.hasData ||
+            snapshot.data!.isEmpty) {
+          return Center(
+            child: CircularProgressIndicator(),
+          );
+        } else {
+          return Column(
+            children: [
+              _buildPieChart(snapshot.data!),
+              _buildCoinList(context, snapshot.data!),
+            ],
+          );
+        }
+      },
+    ),
+  );
+}
 
   Widget _buildLoadingShimmer() {
     return Shimmer.fromColors(
@@ -19753,8 +19738,6 @@ class FAQScreen extends StatelessWidget {
     );
   }
 }
-
-
 
 class HoldingsScreen extends StatefulWidget {
   @override
