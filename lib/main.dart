@@ -17990,10 +17990,158 @@ class CryptoPackCache {
   }
 }
 
+// class CryptoApiService {
+//   final Dio _dio = Dio();
+//   final Map<String, CachedData<Map<String, dynamic>>> _cache = {};
+//   static const Duration _cacheDuration = Duration(minutes: 5);
+
+//   CryptoApiService() {
+//     _dio.interceptors.add(InterceptorsWrapper(
+//       onError: (DioError e, ErrorInterceptorHandler handler) {
+//         ApiError error;
+//         if (e.response != null) {
+//           error = ApiError(
+//               message: e.response!.data['message'] ?? 'Unknown error',
+//               statusCode: e.response!.statusCode);
+//         } else {
+//           error = ApiError(message: e.message ?? 'Unknown error');
+//         }
+//         throw error;
+//       },
+//     ));
+//   }
+
+//   Future<Map<String, dynamic>> getCurrentPriceData(String symbol) async {
+//     if (_cache.containsKey(symbol) && !_isCacheExpired(symbol)) {
+//       return _cache[symbol]!.data;
+//     }
+
+//     try {
+//       final response = await _dio.get(
+//           'https://api.coingecko.com/api/v3/simple/price?ids=$symbol&vs_currencies=usd&include_24hr_change=true');
+//       final data = {
+//         'currentPrice': response.data[symbol]['usd'],
+//         'priceChange24h': response.data[symbol]['usd_24h_change'],
+//       };
+//       _cache[symbol] = CachedData(data: data, timestamp: DateTime.now());
+//       return data;
+//     } catch (e) {
+//       throw ApiError(message: 'Failed to load price data');
+//     }
+//   }
+
+//   Future<Map<String, dynamic>> searchCrypto(String query) async {
+//     try {
+//       final response = await _dio
+//           .get('https://api.coingecko.com/api/v3/search?query=$query');
+//       return response.data;
+//     } catch (e) {
+//       throw ApiError(message: 'Failed to search crypto');
+//     }
+//   }
+
+//   Future<List<dynamic>> fetchCryptoData(String coinIds) async {
+//     try {
+//       final response = await _dio.get(
+//         'https://api.coingecko.com/api/v3/coins/markets',
+//         queryParameters: {
+//           'vs_currency': 'usd',
+//           'ids': coinIds,
+//           'order': 'market_cap_desc',
+//           'per_page': 250,
+//           'page': 1,
+//           'sparkline': false,
+//         },
+//       );
+//       return response.data;
+//     } catch (e) {
+//       throw ApiError(message: 'Failed to fetch data');
+//     }
+//   }
+
+//   Future<Map<String, dynamic>> fetchBatchCryptoData(
+//       List<String> coinIds) async {
+//     try {
+//       final response = await _dio.get(
+//         'https://api.coingecko.com/api/v3/coins/markets',
+//         queryParameters: {
+//           'vs_currency': 'usd',
+//           'ids': coinIds.join(','),
+//           'order': 'market_cap_desc',
+//           'per_page': 250,
+//           'page': 1,
+//           'sparkline': false,
+//         },
+//       );
+//       return Map.fromIterable(response.data,
+//           key: (item) => item['id'], value: (item) => item);
+//     } catch (e) {
+//       throw ApiError(message: 'Failed to fetch batch data');
+//     }
+//   }
+
+//   Future<Map<String, dynamic>> fetchDetailedCoinData(String coinId) async {
+//     try {
+//       final response = await _dio.get(
+//         'https://api.coingecko.com/api/v3/coins/$coinId',
+//         queryParameters: {
+//           'localization': 'false',
+//           'tickers': 'false',
+//           'market_data': 'true',
+//           'community_data': 'true',
+//           'developer_data': 'true',
+//         },
+//       );
+//       return response.data ?? {};
+//     } catch (e) {
+//       print('Error fetching detailed coin data: $e');
+//       throw ApiError(message: 'Failed to fetch detailed coin data');
+//     }
+//   }
+
+//   Future<List<dynamic>> fetchCoinMarketChart(String coinId, int days) async {
+//     try {
+//       final response = await _dio.get(
+//         'https://api.coingecko.com/api/v3/coins/$coinId/market_chart',
+//         queryParameters: {
+//           'vs_currency': 'usd',
+//           'days': days,
+//         },
+//       );
+//       return response.data['prices'] ?? [];
+//     } catch (e) {
+//       print('Error fetching market chart data: $e');
+//       throw ApiError(message: 'Failed to fetch market chart data');
+//     }
+//   }
+
+//   Future<Map<String, dynamic>> fetchGlobalData() async {
+//     try {
+//       final response =
+//           await _dio.get('https://api.coingecko.com/api/v3/global');
+//       return response.data['data'];
+//     } catch (e) {
+//       throw ApiError(message: 'Failed to fetch global data');
+//     }
+//   }
+
+//   bool _isCacheExpired(String key) {
+//     final cachedData = _cache[key];
+//     if (cachedData == null) return true;
+//     return DateTime.now().difference(cachedData.timestamp) > _cacheDuration;
+//   }
+// }
+
+
 class CryptoApiService {
   final Dio _dio = Dio();
   final Map<String, CachedData<Map<String, dynamic>>> _cache = {};
   static const Duration _cacheDuration = Duration(minutes: 5);
+  static const Duration _updateInterval = Duration(seconds: 30);
+  
+  final StreamController<Map<String, dynamic>> _priceUpdateController = StreamController.broadcast();
+  Timer? _updateTimer;
+  Set<String> _subscribedSymbols = {};
 
   CryptoApiService() {
     _dio.interceptors.add(InterceptorsWrapper(
@@ -18011,6 +18159,53 @@ class CryptoApiService {
     ));
   }
 
+  void _startPeriodicUpdates() {
+    _updateTimer?.cancel();
+    _updateTimer = Timer.periodic(_updateInterval, (_) => _fetchUpdates());
+  }
+
+  Future<void> _fetchUpdates() async {
+    if (_subscribedSymbols.isEmpty) return;
+
+    try {
+      final response = await _dio.get(
+        'https://api.coingecko.com/api/v3/simple/price',
+        queryParameters: {
+          'ids': _subscribedSymbols.join(','),
+          'vs_currencies': 'usd',
+          'include_24hr_change': 'true',
+        },
+      );
+
+      response.data.forEach((symbol, data) {
+        final update = {
+          'symbol': symbol,
+          'currentPrice': data['usd'],
+          'priceChange24h': data['usd_24h_change'],
+        };
+        _priceUpdateController.add(update);
+      });
+    } catch (e) {
+      print('Error fetching updates: $e');
+    }
+  }
+
+  Stream<Map<String, dynamic>> get priceUpdates => _priceUpdateController.stream;
+
+  void subscribeToPriceUpdates(List<String> symbols) {
+    _subscribedSymbols.addAll(symbols);
+    if (_updateTimer == null || !_updateTimer!.isActive) {
+      _startPeriodicUpdates();
+    }
+  }
+
+  void unsubscribeFromPriceUpdates(List<String> symbols) {
+    _subscribedSymbols.removeAll(symbols);
+    if (_subscribedSymbols.isEmpty) {
+      _updateTimer?.cancel();
+    }
+  }
+
   Future<Map<String, dynamic>> getCurrentPriceData(String symbol) async {
     if (_cache.containsKey(symbol) && !_isCacheExpired(symbol)) {
       return _cache[symbol]!.data;
@@ -18018,7 +18213,13 @@ class CryptoApiService {
 
     try {
       final response = await _dio.get(
-          'https://api.coingecko.com/api/v3/simple/price?ids=$symbol&vs_currencies=usd&include_24hr_change=true');
+        'https://api.coingecko.com/api/v3/simple/price',
+        queryParameters: {
+          'ids': symbol,
+          'vs_currencies': 'usd',
+          'include_24hr_change': 'true',
+        },
+      );
       final data = {
         'currentPrice': response.data[symbol]['usd'],
         'priceChange24h': response.data[symbol]['usd_24h_change'],
@@ -18032,8 +18233,7 @@ class CryptoApiService {
 
   Future<Map<String, dynamic>> searchCrypto(String query) async {
     try {
-      final response = await _dio
-          .get('https://api.coingecko.com/api/v3/search?query=$query');
+      final response = await _dio.get('https://api.coingecko.com/api/v3/search?query=$query');
       return response.data;
     } catch (e) {
       throw ApiError(message: 'Failed to search crypto');
@@ -18059,8 +18259,7 @@ class CryptoApiService {
     }
   }
 
-  Future<Map<String, dynamic>> fetchBatchCryptoData(
-      List<String> coinIds) async {
+  Future<Map<String, dynamic>> fetchBatchCryptoData(List<String> coinIds) async {
     try {
       final response = await _dio.get(
         'https://api.coingecko.com/api/v3/coins/markets',
@@ -18073,8 +18272,7 @@ class CryptoApiService {
           'sparkline': false,
         },
       );
-      return Map.fromIterable(response.data,
-          key: (item) => item['id'], value: (item) => item);
+      return Map.fromIterable(response.data, key: (item) => item['id'], value: (item) => item);
     } catch (e) {
       throw ApiError(message: 'Failed to fetch batch data');
     }
@@ -18117,12 +18315,16 @@ class CryptoApiService {
 
   Future<Map<String, dynamic>> fetchGlobalData() async {
     try {
-      final response =
-          await _dio.get('https://api.coingecko.com/api/v3/global');
+      final response = await _dio.get('https://api.coingecko.com/api/v3/global');
       return response.data['data'];
     } catch (e) {
       throw ApiError(message: 'Failed to fetch global data');
     }
+  }
+
+  void dispose() {
+    _updateTimer?.cancel();
+    _priceUpdateController.close();
   }
 
   bool _isCacheExpired(String key) {
@@ -18132,6 +18334,22 @@ class CryptoApiService {
   }
 }
 
+// class ApiError implements Exception {
+//   final String message;
+//   final int? statusCode;
+
+//   ApiError({required this.message, this.statusCode});
+
+//   @override
+//   String toString() => 'ApiError: $message (Status Code: $statusCode)';
+// }
+
+// class CachedData<T> {
+//   final T data;
+//   final DateTime timestamp;
+
+//   CachedData({required this.data, required this.timestamp});
+// }
 class HoldingsProvider with ChangeNotifier {
   final CryptoApiService _apiService = CryptoApiService();
   final CryptoPackCache _cryptoPackCache = CryptoPackCache();

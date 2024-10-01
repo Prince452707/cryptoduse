@@ -305,6 +305,8 @@ import 'main.dart';
 final supabase = Supabase.instance.client;
 
 class SignInPage extends StatefulWidget {
+  const SignInPage({super.key});
+
   @override
   _SignInPageState createState() => _SignInPageState();
 }
@@ -363,54 +365,54 @@ class _SignInPageState extends State<SignInPage> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 32.0, vertical: 64.0),
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 64.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              const Text(
                 'Welcome Back!',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 48),
+              const SizedBox(height: 48),
               _buildTextField(
                 controller: _emailController,
                 label: 'Email',
                 icon: Icons.email,
                 keyboardType: TextInputType.emailAddress,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildTextField(
                 controller: _passwordController,
                 label: 'Password',
                 icon: Icons.lock,
                 obscureText: true,
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _signIn,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
                   child: _isLoading
                       ? CircularProgressIndicator(color: Colors.white)
                       : Text('Sign In', style: TextStyle(fontSize: 18)),
                 ),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               TextButton(
                 onPressed: _isLoading ? null : _forgotPassword,
-                child: Text('Forgot Password?'),
+                child: const Text('Forgot Password?'),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Don't have an account?"),
+                  const Text("Don't have an account?"),
                   TextButton(
                     onPressed: _isLoading
                         ? null
@@ -419,7 +421,7 @@ class _SignInPageState extends State<SignInPage> {
                               MaterialPageRoute(builder: (context) => SignUpPage()),
                             );
                           },
-                    child: Text('Sign Up'),
+                    child: const Text('Sign Up'),
                   ),
                 ],
               ),
@@ -455,6 +457,8 @@ class _SignInPageState extends State<SignInPage> {
 }
 
 class SignUpPage extends StatefulWidget {
+  const SignUpPage({super.key});
+
   @override
   _SignUpPageState createState() => _SignUpPageState();
 }
@@ -504,71 +508,71 @@ class _SignUpPageState extends State<SignUpPage> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: EdgeInsets.symmetric(horizontal: 32.0, vertical: 64.0),
+          padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 64.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              const Text(
                 'Create Account',
                 style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
-              SizedBox(height: 48),
+              const SizedBox(height: 48),
               _buildTextField(
                 controller: _firstNameController,
                 label: 'First Name',
                 icon: Icons.person,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildTextField(
                 controller: _lastNameController,
                 label: 'Last Name',
                 icon: Icons.person,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildTextField(
                 controller: _emailController,
                 label: 'Email',
                 icon: Icons.email,
                 keyboardType: TextInputType.emailAddress,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildTextField(
                 controller: _passwordController,
                 label: 'Password',
                 icon: Icons.lock,
                 obscureText: true,
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               _buildTextField(
                 controller: _confirmPasswordController,
                 label: 'Confirm Password',
                 icon: Icons.lock,
                 obscureText: true,
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _isLoading ? null : _signUp,
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
                   child: _isLoading
                       ? CircularProgressIndicator(color: Colors.white)
                       : Text('Sign Up', style: TextStyle(fontSize: 18)),
                 ),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
               ),
-              SizedBox(height: 24),
+              const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text('Already have an account?'),
+                  const Text('Already have an account?'),
                   TextButton(
                     onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
-                    child: Text('Sign In'),
+                    child: const Text('Sign In'),
                   ),
                 ],
               ),
